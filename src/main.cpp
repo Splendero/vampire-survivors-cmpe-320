@@ -111,9 +111,10 @@ int main(int argc, char** argv) {
                  10, 8, 18, WHITE);
         shooter.DrawHud(10, 30);
 
-        if (shotPath && demoFrames > 0 && frame == demoFrames - 1) TakeScreenshot(shotPath);
-
         EndDrawing();
+
+        // After EndDrawing so the HUD batch is flushed before the grab.
+        if (shotPath && demoFrames > 0 && frame == demoFrames - 1) TakeScreenshot(shotPath);
 
         if (demoFrames > 0 && ++frame >= demoFrames) break;
     }
