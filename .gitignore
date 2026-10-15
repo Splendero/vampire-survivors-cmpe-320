@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Build output
+bin/
+obj/
+build_files/
+build/external/
+build/compile_commands.json
+
+# Premake binaries. These are tools, not project source.
+build/premake5
+build/premake5.exe
+build/premake5.osx
+
+# Generated project files. Regenerate with premake for the local platform.
+/Makefile
+/*.make
+/*.sln
+/*.vcxproj
+/*.vcxproj.filters
+/*.vcxproj.user
+
+# Compiler leftovers
+*.o
+*.obj
+*.d
+*.exe
+*.pdb
+*.ilk
