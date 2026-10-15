@@ -15,3 +15,5 @@ Enemy types and how each one behaves.
 - UFO
 
 Enemies drop XP when they die. They get stronger as the run goes on.
+
+`practice_bandits.hpp` is a temporary horde so the guns have targets. Real enemy types should fill `weapons::ShootTarget` and hand that list to `AutoShooter`.

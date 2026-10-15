@@ -1,6 +1,10 @@
-
 #include "raylib.h"
 #include "map/desert_map.hpp"
+#include "weapons/auto_shooter.hpp"
+#include "enemies/practice_bandits.hpp"
+
+#include <cstdlib>
+#include <cstring>
 
 //basic player class, try to implement all classes and functions with this guy in mind
 class Player {
@@ -36,7 +40,14 @@ public:
     }
 };
 
-int main() {
+int main(int argc, char** argv) {
+    int demoFrames = 0;
+    const char* shotPath = nullptr;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--demo") == 0 && i + 1 < argc) demoFrames = std::atoi(argv[++i]);
+        if (std::strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) shotPath = argv[++i];
+    }
+
     // Create game window
     InitWindow(800, 600, "Western Survival Game");
 
@@ -45,6 +56,10 @@ int main() {
 
     // Create player object
     Player player;
+
+    // Guns fire on their own at the nearest bandit in range.
+    weapons::AutoShooter shooter;
+    enemies::PracticeBandits bandits;
 
     // Procedural desert, same seed = same map
     DesertMap map(1337);
@@ -55,9 +70,12 @@ int main() {
     camera.target = player.position;
     camera.zoom = 1.0f;
 
+    int frame = 0;
+
     // Main game loop
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
+        if (demoFrames > 0 && deltaTime <= 0.0f) deltaTime = 1.0f / 60.0f;
 
         // Debug keys: R re-rolls the map, F1 shows biomes
         if (IsKeyPressed(KEY_R)) {
@@ -69,6 +87,8 @@ int main() {
 
         // Update game logic
         player.Update(deltaTime);
+        bandits.Update(player.position, deltaTime);
+        shooter.Update(player.position, deltaTime, bandits.targets);
         camera.target = player.position;
         map.Update(camera, deltaTime);
 
@@ -79,15 +99,23 @@ int main() {
 
         BeginMode2D(camera);
         map.Draw(camera);
+        bandits.Draw();
+        shooter.Draw();
         player.Draw();
+        shooter.DrawCharge(player.position);
         EndMode2D();
 
-        DrawRectangle(0, 0, 800, 34, Fade(BLACK, 0.5f));
+        DrawRectangle(0, 0, 800, 56, Fade(BLACK, 0.55f));
         DrawText(TextFormat("WASD move | R new map | F1 biomes | Seed %u | %s",
                             map.Seed(), desert::BiomeName(map.BiomeAt(player.position))),
                  10, 8, 18, WHITE);
+        shooter.DrawHud(10, 30);
+
+        if (shotPath && demoFrames > 0 && frame == demoFrames - 1) TakeScreenshot(shotPath);
 
         EndDrawing();
+
+        if (demoFrames > 0 && ++frame >= demoFrames) break;
     }
 
     map.Unload();
