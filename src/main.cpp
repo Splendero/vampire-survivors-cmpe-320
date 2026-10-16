@@ -41,6 +41,8 @@ public:
 };
 
 int main(int argc, char** argv) {
+    // Optional: --demo <frames> quits after that many frames.
+    // --screenshot <path> saves the last of those frames. Normal play ignores both.
     int demoFrames = 0;
     const char* shotPath = nullptr;
     for (int i = 1; i < argc; ++i) {
@@ -85,7 +87,8 @@ int main(int argc, char** argv) {
             map.debugBiomes = !map.debugBiomes;
         }
 
-        // Update game logic
+        // Update game logic. Respawn dead bandits before the guns aim, so a
+        // corpse is not still the nearest target on the next frame.
         player.Update(deltaTime);
         bandits.Update(player.position, deltaTime);
         shooter.Update(player.position, deltaTime, bandits.targets);
@@ -100,9 +103,9 @@ int main(int argc, char** argv) {
         BeginMode2D(camera);
         map.Draw(camera);
         bandits.Draw();
-        shooter.Draw();
+        shooter.Draw();          // projectiles, in world space
         player.Draw();
-        shooter.DrawCharge(player.position);
+        shooter.DrawCharge(player.position); // ring sits on top of the player
         EndMode2D();
 
         DrawRectangle(0, 0, 800, 56, Fade(BLACK, 0.55f));

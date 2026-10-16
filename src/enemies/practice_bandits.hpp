@@ -10,9 +10,12 @@
 
 namespace enemies {
 
+// Ten brown stand-ins that walk at the player and respawn off-screen when
+// they die. Delete this class when the real enemy list exists. The shooter
+// only reads and writes `targets`.
 class PracticeBandits {
 public:
-    std::vector<weapons::ShootTarget> targets;
+    std::vector<weapons::ShootTarget> targets; // hand this to AutoShooter::Update
 
     explicit PracticeBandits(int count = 10) {
         targets.resize(count);
@@ -20,6 +23,8 @@ public:
         for (int i = 0; i < count; ++i) Place(i, {400.0f, 300.0f}, false);
     }
 
+    // Walk toward the player, but stop just outside the blue circle so they
+    // bunch up and get shot. A dead slot respawns farther out than the camera.
     void Update(Vector2 player, float dt) {
         for (int i = 0; i < static_cast<int>(targets.size()); ++i) {
             if (!targets[i].alive) {
@@ -37,6 +42,7 @@ public:
         }
     }
 
+    // Body, hat brim, and a 3-hit health bar. White body means hitFlash is on.
     void Draw() const {
         for (const weapons::ShootTarget& target : targets) {
             if (!target.alive) continue;
@@ -53,6 +59,8 @@ private:
     std::vector<float> speed_;
     int waves_ = 0;
 
+    // First placement is inside oatmeal range so the gun fires immediately.
+    // Respawn distance is past the edge of the 800x600 camera.
     void Place(int i, Vector2 player, bool respawn) {
         const float angle = 0.65f * static_cast<float>(i) + static_cast<float>(waves_) * 0.9f;
         const float dist = respawn ? 640.0f + static_cast<float>(i % 3) * 50.0f : 280.0f + static_cast<float>(i % 5) * 70.0f;

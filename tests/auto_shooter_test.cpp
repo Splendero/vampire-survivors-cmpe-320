@@ -1,3 +1,6 @@
+// Headless checks for auto_shooter.hpp. No window. Build with build-linux.sh
+// and run bin/auto_shooter_test. Premake does not compile this file; it is
+// outside src/ so it does not add a second main() to the game.
 #include "weapons/auto_shooter.hpp"
 
 #include <cmath>

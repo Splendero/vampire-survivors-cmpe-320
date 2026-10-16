@@ -16,14 +16,18 @@
 
 namespace weapons {
 
+// One thing a gun is allowed to shoot. Enemy code fills these in; this
+// component does not spawn or own enemies.
 struct ShootTarget {
     Vector2 position{0.0f, 0.0f};
     float radius = 14.0f;
     int hp = 3;
     bool alive = true;
-    float hitFlash = 0.0f;
+    float hitFlash = 0.0f; // seconds left on the white hit flash, counted down by Update
 };
 
+// A shot already in the air. hitIndex records targets this shot has damaged
+// so a piercing shot does not hit the same enemy every frame.
 struct Projectile {
     Vector2 position{0.0f, 0.0f};
     Vector2 velocity{0.0f, 0.0f};
@@ -37,6 +41,8 @@ struct Projectile {
     int hitCount = 0;
 };
 
+// One equipped gun. chargeTime == 0 fires on cooldown. chargeTime > 0
+// builds timer while a target is in range, then releases one shot.
 struct Weapon {
     const char* name = "Oatmeal";
     float cooldown = 0.45f;    // seconds between shots when chargeTime is 0
@@ -52,6 +58,7 @@ struct Weapon {
     std::vector<Projectile> shots;
 };
 
+// Short hit puff. Drawn and removed by AutoShooter, not by the weapons.
 struct Spark {
     Vector2 position{0.0f, 0.0f};
     float life = 0.0f;
@@ -78,6 +85,7 @@ inline float DistToSegment(Vector2 p, Vector2 a, Vector2 b, float* outT) {
     return Dist(p, closest);
 }
 
+// True if this shot already applied damage to targets[index].
 inline bool AlreadyHit(const Projectile& shot, int index) {
     for (int i = 0; i < shot.hitCount; ++i) {
         if (shot.hitIndex[i] == index) return true;
@@ -85,6 +93,8 @@ inline bool AlreadyHit(const Projectile& shot, int index) {
     return false;
 }
 
+// Index of the closest living target whose edge is within range, or -1.
+// Distance is measured to the edge, so a big target is easier to reach.
 inline int NearestInRange(Vector2 origin, float range, const std::vector<ShootTarget>& targets) {
     int best = -1;
     float bestDist = range;
@@ -99,6 +109,7 @@ inline int NearestInRange(Vector2 origin, float range, const std::vector<ShootTa
     return best;
 }
 
+// Deal damage once, flash the target, and kill the shot unless it pierces.
 inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vector<Spark>& sparks) {
     target.hp -= shot.damage;
     target.hitFlash = 0.12f;
@@ -111,6 +122,8 @@ inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vect
     if (!shot.pierce || shot.hitCount >= 8) shot.alive = false;
 }
 
+// Spawn one projectile from origin toward aim. Caps the list so a stuck
+// timer cannot allocate forever.
 inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim) {
     if (weapon.shots.size() >= 48) return;
     const float dx = aim.x - origin.x;
@@ -131,6 +144,9 @@ inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim) {
     weapon.shots.push_back(shot);
 }
 
+// Move every shot and test the whole segment it traveled this frame, so a
+// fast shot cannot skip over a small target. A normal shot stops on the
+// first target along that segment. A piercing shot keeps going.
 inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks) {
     for (Projectile& shot : weapon.shots) {
         if (!shot.alive) continue;
@@ -172,6 +188,9 @@ inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& target
                        weapon.shots.end());
 }
 
+// Cooldown guns fire when timer hits 0 and a target is in range.
+// Charge guns fill timer only while something is in range, then fire and
+// reset. With nothing to shoot, stored charge drains back off.
 inline void UpdateWeapon(Weapon& weapon, Vector2 origin, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks) {
     const int aim = NearestInRange(origin, weapon.range, targets);
     if (weapon.chargeTime > 0.0f) {
@@ -226,6 +245,8 @@ public:
         weapons.push_back(charge);
     }
 
+    // origin is the player position in world pixels. targets is not copied;
+    // hits write hp, alive, and hitFlash back into that same vector.
     void Update(Vector2 origin, float dt, std::vector<ShootTarget>& targets) {
         for (ShootTarget& target : targets) {
             if (target.hitFlash > 0.0f) target.hitFlash -= dt;
@@ -237,6 +258,7 @@ public:
                       sparks_.end());
     }
 
+    // World-space shots and hit sparks. Call inside BeginMode2D.
     void Draw() const {
         for (const Weapon& weapon : weapons) {
             for (const Projectile& shot : weapon.shots) {
@@ -258,6 +280,8 @@ public:
         }
     }
 
+    // Screen-space line: "Auto-fire | Oatmeal 0.2s | Charge 40%".
+    // Call after EndMode2D. x and y are pixels from the top-left of the window.
     void DrawHud(int x, int y) const {
         char line[180] = "Auto-fire";
         for (const Weapon& weapon : weapons) {
