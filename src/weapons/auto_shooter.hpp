@@ -21,7 +21,8 @@ namespace weapons {
 struct ShootTarget {
     Vector2 position{0.0f, 0.0f};
     float radius = 14.0f;
-    int hp = 3;
+    int hp = 100;
+    int maxHp = 100; // full health, used to size the health bar
     bool alive = true;
     float hitFlash = 0.0f; // seconds left on the white hit flash, counted down by Update
 };
@@ -32,10 +33,10 @@ struct Projectile {
     Vector2 position{0.0f, 0.0f};
     Vector2 velocity{0.0f, 0.0f};
     float radius = 6.0f;
-    int damage = 1;
+    int damage = 34;
     float life = 1.2f;
     bool alive = true;
-    bool pierce = false;
+    int maxHits = 1; // Maximum number of different enemies this projectile can hit.
     Color color{214, 186, 132, 255};
     int hitIndex[8]{};
     int hitCount = 0;
@@ -44,15 +45,15 @@ struct Projectile {
 // One equipped gun. chargeTime == 0 fires on cooldown. chargeTime > 0
 // builds timer while a target is in range, then releases one shot.
 struct Weapon {
-    const char* name = "Oatmeal";
+    const char* name = "Revolver";
     float cooldown = 0.45f;    // seconds between shots when chargeTime is 0
     float chargeTime = 0.0f;   // seconds to fully charge; 0 means fire on cooldown
     float range = 360.0f;
     float speed = 460.0f;
     float shotRadius = 7.0f;
-    int damage = 1;
+    int damage = 34;
     float life = 1.2f;
-    bool pierce = false;
+    int pierce = 1; // Number of enemies a shot can hit, including the first enemy.
     Color color{214, 186, 132, 255};
     float timer = 0.0f;        // cooldown remaining, or charge built up
     std::vector<Projectile> shots;
@@ -119,7 +120,7 @@ inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vect
     }
     if (shot.hitCount < 8) shot.hitIndex[shot.hitCount++] = index;
     if (sparks.size() < 64) sparks.push_back(Spark{target.position, 0.16f, shot.color});
-    if (!shot.pierce || shot.hitCount >= 8) shot.alive = false;
+    if (shot.hitCount >= shot.maxHits || shot.hitCount >= 8) shot.alive = false;
 }
 
 // Spawn one projectile from origin toward aim. Caps the list so a stuck
@@ -138,7 +139,7 @@ inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim) {
     shot.damage = weapon.damage;
     shot.life = weapon.life;
     shot.alive = true;
-    shot.pierce = weapon.pierce;
+    shot.maxHits = std::max(1, std::min(8, weapon.pierce));
     shot.color = weapon.color;
     shot.hitCount = 0;
     weapon.shots.push_back(shot);
@@ -159,13 +160,29 @@ inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& target
             continue;
         }
 
-        if (shot.pierce) {
+        if (shot.maxHits > 1) {
+            // Gather collisions and process them in the order the projectile
+            // travels through them. This lets one piercing shot hit multiple
+            // enemies along the same path in a single frame.
+            struct ShotCollision { int index; float t; };
+            std::vector<ShotCollision> collisions;
             for (int i = 0; i < static_cast<int>(targets.size()); ++i) {
-                if (!shot.alive) break;
                 if (!targets[i].alive || AlreadyHit(shot, i)) continue;
-                if (DistToSegment(targets[i].position, from, shot.position, nullptr) <= shot.radius + targets[i].radius) {
-                    ApplyHit(shot, targets[i], i, sparks);
+                float t = 0.0f;
+                const float gap = DistToSegment(targets[i].position, from, shot.position, &t);
+                if (gap <= shot.radius + targets[i].radius) {
+                    collisions.push_back({i, t});
                 }
+            }
+            std::sort(collisions.begin(), collisions.end(),
+                      [](const ShotCollision& a, const ShotCollision& b) { return a.t < b.t; });
+            for (const ShotCollision& collision : collisions) {
+                if (!shot.alive) break;
+                const int i = collision.index;
+                // A target may have been killed by another projectile earlier
+                // in this same update, so check it again before applying damage.
+                if (!targets[i].alive || AlreadyHit(shot, i)) continue;
+                ApplyHit(shot, targets[i], i, sparks);
             }
         } else {
             int best = -1;
@@ -210,7 +227,7 @@ inline void UpdateWeapon(Weapon& weapon, Vector2 origin, float dt, std::vector<S
     StepShots(weapon, dt, targets, sparks);
 }
 
-// The player's guns. Starts with oatmeal throwing and the charge shot.
+// The player's guns. Starts with the Revolver and the Charge shot.
 class AutoShooter {
 public:
     std::vector<Weapon> weapons;
@@ -218,18 +235,18 @@ public:
     explicit AutoShooter(bool equipDefaults = true) {
         if (!equipDefaults) return;
 
-        Weapon oatmeal;
-        oatmeal.name = "Oatmeal";
-        oatmeal.cooldown = 0.42f;
-        oatmeal.chargeTime = 0.0f;
-        oatmeal.range = 360.0f;
-        oatmeal.speed = 480.0f;
-        oatmeal.shotRadius = 6.5f;
-        oatmeal.damage = 1;
-        oatmeal.life = 1.15f;
-        oatmeal.pierce = false;
-        oatmeal.color = {214, 186, 132, 255};
-        weapons.push_back(oatmeal);
+        Weapon revolver;
+        revolver.name = "Revolver";
+        revolver.cooldown = 0.42f;
+        revolver.chargeTime = 0.0f;
+        revolver.range = 360.0f;
+        revolver.speed = 480.0f;
+        revolver.shotRadius = 6.5f;
+        revolver.damage = 34;
+        revolver.life = 1.15f;
+        revolver.pierce = 1;
+        revolver.color = {214, 186, 132, 255};
+        weapons.push_back(revolver);
 
         Weapon charge;
         charge.name = "Charge";
@@ -238,9 +255,9 @@ public:
         charge.range = 480.0f;
         charge.speed = 640.0f;
         charge.shotRadius = 12.0f;
-        charge.damage = 3;
+        charge.damage = 100;
         charge.life = 0.95f;
-        charge.pierce = true;
+        charge.pierce = 8;
         charge.color = {214, 92, 42, 255};
         weapons.push_back(charge);
     }
@@ -280,7 +297,7 @@ public:
         }
     }
 
-    // Screen-space line: "Auto-fire | Oatmeal 0.2s | Charge 40%".
+    // Screen-space line: "Auto-fire | Revolver 0.2s | Charge 40%".
     // Call after EndMode2D. x and y are pixels from the top-left of the window.
     void DrawHud(int x, int y) const {
         char line[180] = "Auto-fire";
