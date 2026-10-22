@@ -1,4 +1,5 @@
 #include "app/game.hpp"
+#include "audio/audio.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -17,6 +18,7 @@ int main(int argc, char** argv) {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     InitWindow(800, 600, "Western Survival Game");
+    audio::Init();
     SetTargetFPS(60);
 
     app::Game game;
@@ -24,6 +26,7 @@ int main(int argc, char** argv) {
 
     int frame = 0;
     while (!WindowShouldClose()) {
+        audio::Update();
         float deltaTime = GetFrameTime();
         if (demoFrames > 0 && deltaTime <= 0.0f) deltaTime = 1.0f / 60.0f;
 
@@ -36,6 +39,7 @@ int main(int argc, char** argv) {
     }
 
     game.Shutdown();
+    audio::Shutdown();
     CloseWindow();
     return 0;
 }

@@ -5,6 +5,7 @@
 
 #include "raylib.h"
 #include "core/events.hpp"
+#include "audio/audio.hpp"
 #include "map/desert_map.hpp"
 #include "weapons/auto_shooter.hpp"
 #include "enemies/practice_bandits.hpp"
@@ -167,6 +168,10 @@ private:
         bus.Subscribe(events::Type::PlayerDied, [this](const events::Event&) {
             gameOver = true;
         });
+
+        bus.Subscribe(events::Type::WeaponFired, [](const events::Event&) { audio::Play(audio::SHOOT); });
+        bus.Subscribe(events::Type::PlayerHurt, [](const events::Event&) { audio::Play(audio::HIT); });
+        bus.Subscribe(events::Type::PlayerDied, [](const events::Event&) { audio::Play(audio::GAME_OVER); });
     }
 };
 
