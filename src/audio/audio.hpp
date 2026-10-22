@@ -1,6 +1,6 @@
 #pragma once
 // Music and sound effects. Files go in assets/audio/.
-// Missing files are skipped, so the game still runs before every sound is added.
+// Missing files are skipped.
 
 #include "raylib.h"
 
@@ -20,7 +20,7 @@ inline bool loaded[SFX_COUNT] = {};
 inline Music music = {};
 inline bool musicLoaded = false;
 
-// Finds a file in assets/audio/ from wherever the game was started. Empty if not found.
+// Returns "" if the file is not found.
 inline std::string FindFile(const char* name) {
     const std::string rel = std::string("assets/audio/") + name;
     const std::string candidates[] = {
@@ -52,7 +52,7 @@ inline void Init() {
     }
 }
 
-// Call every frame. Music is streamed in small chunks and stops if this is skipped.
+// Call every frame or the music stops.
 inline void Update() {
     if (musicLoaded) UpdateMusicStream(music);
 }

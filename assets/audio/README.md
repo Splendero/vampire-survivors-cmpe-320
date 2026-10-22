@@ -11,9 +11,7 @@ File names the game looks for:
 - `pickup.wav`
 - `game_over.wav`
 
-Missing files are skipped, so add them one at a time.
-
-Still to come: menu music and the ending UFO.
+TODO: menu music, ending UFO.
 
 ## Credits
 
