@@ -44,7 +44,7 @@ inline void Init() {
         sounds[i] = LoadSound(path.c_str());
         loaded[i] = true;
     }
-    const std::string path = FindFile("music.ogg");
+    const std::string path = FindFile("music.mp3");
     if (!path.empty()) {
         music = LoadMusicStream(path.c_str());
         musicLoaded = true;

@@ -4,7 +4,7 @@ Music and sound effects. Code is in `src/audio/audio.hpp`.
 
 File names the game looks for:
 
-- `music.ogg` - background music, loops
+- `music.mp3` - background music, loops
 - `shoot.wav`
 - `hit.wav`
 - `level_up.wav`
