@@ -14,3 +14,8 @@ File names the game looks for:
 Missing files are skipped, so add them one at a time.
 
 Still to come: menu music and the ending UFO.
+
+## Credits
+
+- Sound effects made with sfxr (sfxr.me)
+- `music.mp3`: "Western Cowboy" by hitslab, from Pixabay (pixabay.com/music)
