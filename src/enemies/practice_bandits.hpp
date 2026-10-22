@@ -3,7 +3,8 @@
 // Replace this with the real enemy component later: keep filling
 // weapons::ShootTarget and pass that vector to AutoShooter.
 
-#include "../weapons/auto_shooter.hpp"
+#include "core/target.hpp"
+#include "raylib.h"
 
 #include <cmath>
 #include <vector>

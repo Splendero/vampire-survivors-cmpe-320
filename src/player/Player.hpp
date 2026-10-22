@@ -1,7 +1,8 @@
 #pragma once
 
 #include "raylib.h"
-#include "weapons/auto_shooter.hpp"
+#include "core/events.hpp"
+#include "core/target.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,10 @@ public:
     // Prevents damage every single frame while touching an enemy
     float damageCooldown = 0.0f;
     float damageInterval = 0.75f;
+
+    // When set, a damaging touch publishes PlayerHurt, and a killing touch
+    // also publishes PlayerDied. Game::Wire is what listens.
+    void SetBus(events::Bus* bus) { bus_ = bus; }
 
     void Update(float deltaTime) {
         // Keep the existing WASD movement
@@ -80,6 +85,12 @@ public:
             if (health > 0 && damageCooldown <= 0.0f) {
                 health = std::max(0, health - 10);
                 damageCooldown = damageInterval;
+                if (bus_) {
+                    bus_->Publish(events::Event{events::Type::PlayerHurt, position, 10, health, nullptr});
+                    if (health <= 0) {
+                        bus_->Publish(events::Event{events::Type::PlayerDied, position, 10, health, nullptr});
+                    }
+                }
             }
         }
     }
@@ -134,4 +145,7 @@ public:
             WHITE
         );
     }
+
+private:
+    events::Bus* bus_ = nullptr;
 };

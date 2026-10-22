@@ -1,9 +1,8 @@
 #pragma once
 // Items enemies can drop that the player walks over to collect (health, power-ups, etc.).
 //
-// Usage (see main.cpp):
-//   pickups::PickupSystem pickups;
-//   pickups.SpawnFromKills(bandits.targets);   // after the shooter has updated
+// Usage (wired in app/game.hpp):
+//   An EnemyKilled event calls OnEnemyKilled(position).
 //   pickups.Update(player, deltaTime);         // collects anything the player touches
 //   pickups.Draw();                            // inside BeginMode2D
 //
@@ -13,8 +12,8 @@
 //   3. Say what it does in ApplyEffect() and how it looks in DrawPickup().
 
 #include "raylib.h"
-#include "../weapons/auto_shooter.hpp"
-#include "../player/Player.hpp"
+#include "core/target.hpp"
+#include "player/Player.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -86,18 +85,21 @@ public:
         items.push_back(pickup);
     }
 
-    // Roll the drop table for every enemy that died this frame.
-    // Dead targets are still marked !alive at this point; the enemy code
-    // respawns them at the start of the next frame (same as the EXP orbs).
+    // One enemy died at `position`. Roll the drop table once.
+    // Called from the EnemyKilled subscription in Game::Wire.
+    void OnEnemyKilled(Vector2 position) {
+        for (const DropChance& drop : kDropTable) {
+            if (std::rand() % drop.oneIn == 0) {
+                // Nudge it off the EXP orb so both are visible.
+                Spawn(drop.type, {position.x + 14.0f, position.y}, drop.amount);
+            }
+        }
+    }
+
+    // Same roll as OnEnemyKilled, for a caller that still has the target list.
     void SpawnFromKills(const std::vector<weapons::ShootTarget>& targets) {
         for (const weapons::ShootTarget& target : targets) {
-            if (target.alive) continue;
-            for (const DropChance& drop : kDropTable) {
-                if (std::rand() % drop.oneIn == 0) {
-                    // Nudge it off the EXP orb so both are visible.
-                    Spawn(drop.type, {target.position.x + 14.0f, target.position.y}, drop.amount);
-                }
-            }
+            if (!target.alive) OnEnemyKilled(target.position);
         }
     }
 

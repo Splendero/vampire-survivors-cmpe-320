@@ -19,18 +19,24 @@ assets/                 art and sound
     desert/             desert map (Spencer)
 
 src/                    game code
+  app/                  one run, and the event subscriptions that connect it
+  core/                 event bus and the shared hit target
   menu/                 start menu
   player/               who you play as
   enemies/              enemy types
   weapons/              weapons and upgrades (auto-fire)
   map/                  loading a map and its difficulty
-  gameplay/             what happens during a run
+  gameplay/             level-up, pickups, and the rest of a run
   director/             what spawns, and how hard the run gets
 ```
 
+## Events
+
+Systems do not call each other. The shooter publishes `EnemyKilled` and `WeaponFired`. The player publishes `PlayerHurt` and `PlayerDied`. `src/app/game.hpp` (`Game::Wire`) is the only place that subscribes, and that is where experience orbs and pickups come from. To react to a kill, a shot, or the player's death, add a subscription there. See `src/core/README.md`.
+
 ## Automatic shooting
 
-Weapons fire by themselves. `src/weapons/auto_shooter.hpp` aims oatmeal and the charge shot at the nearest living target. WASD only moves. Practice bandits in `src/enemies/practice_bandits.hpp` stand in until the real enemy types are merged.
+Weapons fire by themselves. `src/weapons/auto_shooter.hpp` aims the revolver at the nearest living target. WASD only moves. Practice bandits in `src/enemies/practice_bandits.hpp` stand in until the real enemy types are merged.
 
 Windows stays on the Premake `.bat` files. On Linux, with raylib available:
 

@@ -7,6 +7,8 @@
 // construct the shooter after InitWindow(), and call Draw() inside BeginMode2D.
 
 #include "raylib.h"
+#include "core/events.hpp"
+#include "core/target.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -15,17 +17,6 @@
 #include <vector>
 
 namespace weapons {
-
-// One thing a gun is allowed to shoot. Enemy code fills these in; this
-// component does not spawn or own enemies.
-struct ShootTarget {
-    Vector2 position{0.0f, 0.0f};
-    float radius = 14.0f;
-    int hp = 100;
-    int maxHp = 100; // full health, used to size the health bar
-    bool alive = true;
-    float hitFlash = 0.0f; // seconds left on the white hit flash, counted down by Update
-};
 
 // A shot already in the air. hitIndex records targets this shot has damaged
 // so a piercing shot does not hit the same enemy every frame.
@@ -111,12 +102,18 @@ inline int NearestInRange(Vector2 origin, float range, const std::vector<ShootTa
 }
 
 // Deal damage once, flash the target, and kill the shot unless it pierces.
-inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vector<Spark>& sparks) {
+// The first hit that drops a target to 0 HP publishes EnemyKilled. Pass a
+// null bus to skip that (the headless weapon tests do).
+inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vector<Spark>& sparks, events::Bus* bus) {
+    const bool killed = target.hp - shot.damage <= 0;
     target.hp -= shot.damage;
     target.hitFlash = 0.12f;
     if (target.hp <= 0) {
         target.hp = 0;
         target.alive = false;
+    }
+    if (killed && bus) {
+        bus->Publish(events::Event{events::Type::EnemyKilled, target.position, shot.damage, 0, nullptr});
     }
     if (shot.hitCount < 8) shot.hitIndex[shot.hitCount++] = index;
     if (sparks.size() < 64) sparks.push_back(Spark{target.position, 0.16f, shot.color});
@@ -125,7 +122,7 @@ inline void ApplyHit(Projectile& shot, ShootTarget& target, int index, std::vect
 
 // Spawn one projectile from origin toward aim. Caps the list so a stuck
 // timer cannot allocate forever.
-inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim) {
+inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim, events::Bus* bus) {
     if (weapon.shots.size() >= 48) return;
     const float dx = aim.x - origin.x;
     const float dy = aim.y - origin.y;
@@ -143,12 +140,13 @@ inline void FireAt(Weapon& weapon, Vector2 origin, Vector2 aim) {
     shot.color = weapon.color;
     shot.hitCount = 0;
     weapon.shots.push_back(shot);
+    if (bus) bus->Publish(events::Event{events::Type::WeaponFired, origin, weapon.damage, 0, weapon.name});
 }
 
 // Move every shot and test the whole segment it traveled this frame, so a
 // fast shot cannot skip over a small target. A normal shot stops on the
 // first target along that segment. A piercing shot keeps going.
-inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks) {
+inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks, events::Bus* bus) {
     for (Projectile& shot : weapon.shots) {
         if (!shot.alive) continue;
         const Vector2 from = shot.position;
@@ -182,7 +180,7 @@ inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& target
                 // A target may have been killed by another projectile earlier
                 // in this same update, so check it again before applying damage.
                 if (!targets[i].alive || AlreadyHit(shot, i)) continue;
-                ApplyHit(shot, targets[i], i, sparks);
+                ApplyHit(shot, targets[i], i, sparks, bus);
             }
         } else {
             int best = -1;
@@ -196,7 +194,7 @@ inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& target
                     best = i;
                 }
             }
-            if (best >= 0) ApplyHit(shot, targets[best], best, sparks);
+            if (best >= 0) ApplyHit(shot, targets[best], best, sparks, bus);
         }
     }
 
@@ -208,29 +206,32 @@ inline void StepShots(Weapon& weapon, float dt, std::vector<ShootTarget>& target
 // Cooldown guns fire when timer hits 0 and a target is in range.
 // Charge guns fill timer only while something is in range, then fire and
 // reset. With nothing to shoot, stored charge drains back off.
-inline void UpdateWeapon(Weapon& weapon, Vector2 origin, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks) {
+inline void UpdateWeapon(Weapon& weapon, Vector2 origin, float dt, std::vector<ShootTarget>& targets, std::vector<Spark>& sparks, events::Bus* bus) {
     const int aim = NearestInRange(origin, weapon.range, targets);
     if (weapon.chargeTime > 0.0f) {
         if (aim >= 0) weapon.timer += dt;
         else weapon.timer = std::max(0.0f, weapon.timer - dt);
         if (aim >= 0 && weapon.timer >= weapon.chargeTime) {
-            FireAt(weapon, origin, targets[aim].position);
+            FireAt(weapon, origin, targets[aim].position, bus);
             weapon.timer = 0.0f;
         }
     } else if (weapon.timer > 0.0f) {
         weapon.timer -= dt;
     } else if (aim >= 0) {
-        FireAt(weapon, origin, targets[aim].position);
+        FireAt(weapon, origin, targets[aim].position, bus);
         weapon.timer = weapon.cooldown;
     }
 
-    StepShots(weapon, dt, targets, sparks);
+    StepShots(weapon, dt, targets, sparks, bus);
 }
 
 // The player's guns. Starts with the Revolver and the Charge shot.
 class AutoShooter {
 public:
     std::vector<Weapon> weapons;
+
+    // Optional. When set, kills publish EnemyKilled and shots publish WeaponFired.
+    void SetBus(events::Bus* bus) { bus_ = bus; }
 
     explicit AutoShooter(bool equipDefaults = true) {
         if (!equipDefaults) return;
@@ -268,7 +269,7 @@ public:
         for (ShootTarget& target : targets) {
             if (target.hitFlash > 0.0f) target.hitFlash -= dt;
         }
-        for (Weapon& weapon : weapons) UpdateWeapon(weapon, origin, dt, targets, sparks_);
+        for (Weapon& weapon : weapons) UpdateWeapon(weapon, origin, dt, targets, sparks_, bus_);
         for (Spark& spark : sparks_) spark.life -= dt;
         sparks_.erase(std::remove_if(sparks_.begin(), sparks_.end(),
                                      [](const Spark& spark) { return spark.life <= 0.0f; }),
@@ -318,6 +319,7 @@ public:
 
 private:
     std::vector<Spark> sparks_;
+    events::Bus* bus_ = nullptr;
 };
 
 }  // namespace weapons

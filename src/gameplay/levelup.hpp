@@ -31,11 +31,11 @@ struct UpgradeOption {
 
 class LevelUpSystem {
 public:
-    void UpdateExperience(
-        Vector2 playerPosition,
-        float playerRadius,
-        const std::vector<weapons::ShootTarget>& targets
-    );
+    // Drop one orb where an enemy died. Game::Wire calls this on EnemyKilled.
+    void OnEnemyKilled(Vector2 position);
+
+    // Pull nearby orbs into the player. Does not look at the enemy list.
+    void UpdateExperience(Vector2 playerPosition, float playerRadius);
 
     void StartLevelUpIfReady(const weapons::AutoShooter& shooter);
     void HandleInput(weapons::AutoShooter& shooter);
@@ -193,17 +193,12 @@ void ApplyUpgrade(const UpgradeOption& option, weapons::AutoShooter& shooter) {
 
 } // namespace
 
-inline void LevelUpSystem::UpdateExperience(
-    Vector2 playerPosition,
-    float playerRadius,
-    const std::vector<weapons::ShootTarget>& targets
-) {
-    // Enemies drop an experience orb when the shooter kills them.
-    for (const weapons::ShootTarget& target : targets) {
-        if (!target.alive) expOrbs.push_back({target.position, 8.0f, 1});
-    }
+inline void LevelUpSystem::OnEnemyKilled(Vector2 position) {
+    expOrbs.push_back({position, 8.0f, 1});
+}
 
-    // Move and collect experience orbs.
+inline void LevelUpSystem::UpdateExperience(Vector2 playerPosition, float playerRadius) {
+    // Move and collect experience orbs. Orbs were added by OnEnemyKilled.
     for (ExpOrb& orb : expOrbs) {
         if (orb.radius > 0.0f) {
             const float dx = orb.position.x - playerPosition.x;
@@ -321,13 +316,8 @@ inline void HandleInput(LevelUpSystem* levelUp, weapons::AutoShooter& shooter) {
     levelUp->HandleInput(shooter);
 }
 
-inline void UpdateExperience(
-    LevelUpSystem* levelUp,
-    Vector2 playerPosition,
-    float playerRadius,
-    const std::vector<weapons::ShootTarget>& targets
-) {
-    levelUp->UpdateExperience(playerPosition, playerRadius, targets);
+inline void UpdateExperience(LevelUpSystem* levelUp, Vector2 playerPosition, float playerRadius) {
+    levelUp->UpdateExperience(playerPosition, playerRadius);
 }
 
 inline void StartLevelUpIfReady(LevelUpSystem* levelUp, const weapons::AutoShooter& shooter) {

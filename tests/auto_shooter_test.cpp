@@ -2,6 +2,7 @@
 // and run bin/auto_shooter_test. Premake does not compile this file; it is
 // outside src/ so it does not add a second main() to the game.
 #include "weapons/auto_shooter.hpp"
+#include "core/events.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -37,7 +38,7 @@ static weapons::Weapon Oatmeal() {
     weapon.shotRadius = 6.0f;
     weapon.damage = 1;
     weapon.life = 3.0f;
-    weapon.pierce = false;
+    weapon.pierce = 1;
     weapon.color = WHITE;
     weapon.timer = 0.0f;
     return weapon;
@@ -93,7 +94,7 @@ int main() {
         charge.name = "Charge";
         charge.chargeTime = 1.0f;
         charge.damage = 3;
-        charge.pierce = true;
+        charge.pierce = 8;
         charge.speed = 200.0f;
         gun.weapons.push_back(charge);
         std::vector<weapons::ShootTarget> targets{Make(50.0f, 0.0f), Make(90.0f, 0.0f)};
@@ -103,6 +104,30 @@ int main() {
         gun.Update({0.0f, 0.0f}, 0.7f, targets);
         CHECK(!targets[0].alive);
         CHECK(!targets[1].alive);
+    }
+
+    // A killing hit publishes EnemyKilled once. A later frame does not publish again.
+    {
+        events::Bus bus;
+        int kills = 0;
+        bus.Subscribe(events::Type::EnemyKilled, [&](const events::Event& event) {
+            ++kills;
+            CHECK(event.position.x == 40.0f);
+            CHECK(event.amount == 5);
+        });
+        weapons::AutoShooter gun(false);
+        gun.SetBus(&bus);
+        weapons::Weapon weapon = Oatmeal();
+        weapon.damage = 5;
+        weapon.pierce = 1;
+        gun.weapons.push_back(weapon);
+        std::vector<weapons::ShootTarget> targets{Make(40.0f, 0.0f, 5)};
+        gun.Update({0.0f, 0.0f}, 0.016f, targets);
+        gun.Update({0.0f, 0.0f}, 0.3f, targets);
+        CHECK(kills == 1);
+        CHECK(!targets[0].alive);
+        gun.Update({0.0f, 0.0f}, 0.3f, targets);
+        CHECK(kills == 1);
     }
 
     // Charge drains when every target is gone.
