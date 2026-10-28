@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     int frame = 0;
     while (!WindowShouldClose()) {
         audio::Update();
+        audio::SetMusicQuiet(game.levelUp.IsActive());
         float deltaTime = GetFrameTime();
         if (demoFrames > 0 && deltaTime <= 0.0f) deltaTime = 1.0f / 60.0f;
 

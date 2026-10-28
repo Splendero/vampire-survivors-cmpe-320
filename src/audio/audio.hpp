@@ -69,6 +69,11 @@ inline void Update() {
     if (musicLoaded) UpdateMusicStream(music);
 }
 
+// Turns the music down, e.g. while the level up menu is open.
+inline void SetMusicQuiet(bool quiet) {
+    if (musicLoaded) SetMusicVolume(music, quiet ? 0.3f : 1.0f);
+}
+
 inline void Play(Sfx sfx) {
     if (!loaded[sfx]) return;
     Sound& sound = copies[sfx][nextCopy[sfx]];
