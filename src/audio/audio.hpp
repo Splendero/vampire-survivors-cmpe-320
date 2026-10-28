@@ -8,18 +8,18 @@
 
 namespace audio {
 
-enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, SFX_COUNT };
+enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, XP, SFX_COUNT };
 
 // File names in the same order as Sfx.
 inline const char* kSfxFiles[SFX_COUNT] = {
-    "shoot.wav", "hit.wav", "level_up.wav", "pickup.wav", "game_over.wav",
+    "shoot.wav", "hit.wav", "level_up.wav", "pickup.wav", "game_over.wav", "xp.wav",
 };
 
 // Each sound has a few copies that take turns, so a new shot
 // doesn't cut off the one still playing.
 constexpr int kCopies = 4;
 
-// Shoot and hit pitch range, in percent of normal.
+// Shoot, hit, and XP pitch range, in percent of normal.
 constexpr int kPitchMin = 80;
 constexpr int kPitchMax = 120;
 
@@ -30,6 +30,8 @@ inline bool loaded[SFX_COUNT] = {};
 inline Music music = {};
 inline bool musicLoaded = false;
 inline bool muted = false;
+inline int lastLevel = 1;
+inline int lastXp = 0;
 
 // Returns "" if the file is not found.
 inline std::string FindFile(const char* name) {
@@ -91,11 +93,19 @@ inline void Play(Sfx sfx) {
     Sound& sound = copies[sfx][nextCopy[sfx]];
     nextCopy[sfx] = (nextCopy[sfx] + 1) % kCopies;
 
-    // Shots and hits play constantly, so change the pitch a bit each time.
-    if (sfx == SHOOT || sfx == HIT) {
+    // These play constantly, so change the pitch a bit each time.
+    if (sfx == SHOOT || sfx == HIT || sfx == XP) {
         SetSoundPitch(sound, GetRandomValue(kPitchMin, kPitchMax) / 100.0f);
     }
     PlaySound(sound);
+}
+
+// Call every frame. Plays the XP sound when XP or level goes up.
+// XP drops back down on a level up, which is why level is checked too.
+inline void TrackXp(int level, int xp) {
+    if (xp > lastXp || level > lastLevel) Play(XP);
+    lastLevel = level;
+    lastXp = xp;
 }
 
 // Call once, before CloseWindow().
