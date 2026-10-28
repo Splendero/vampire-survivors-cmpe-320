@@ -19,6 +19,10 @@ inline const char* kSfxFiles[SFX_COUNT] = {
 // doesn't cut off the one still playing.
 constexpr int kCopies = 4;
 
+// Shoot and hit pitch range, in percent of normal.
+constexpr int kPitchMin = 90;
+constexpr int kPitchMax = 110;
+
 inline Sound sounds[SFX_COUNT] = {};
 inline Sound copies[SFX_COUNT][kCopies] = {};
 inline int nextCopy[SFX_COUNT] = {};
@@ -89,7 +93,7 @@ inline void Play(Sfx sfx) {
 
     // Shots and hits play constantly, so change the pitch a bit each time.
     if (sfx == SHOOT || sfx == HIT) {
-        SetSoundPitch(sound, GetRandomValue(90, 110) / 100.0f);
+        SetSoundPitch(sound, GetRandomValue(kPitchMin, kPitchMax) / 100.0f);
     }
     PlaySound(sound);
 }
