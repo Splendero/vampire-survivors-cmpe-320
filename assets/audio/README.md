@@ -12,6 +12,7 @@ File names the game looks for:
 - `game_over.wav`
 - `xp.wav` - picking up an XP orb
 - `charge.wav` - the Charge gun. Other guns use `shoot.wav`
+- `enemy_death.wav`
 
 TODO: menu music, ending UFO.
 
