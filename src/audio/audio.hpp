@@ -19,6 +19,7 @@ inline Sound sounds[SFX_COUNT] = {};
 inline bool loaded[SFX_COUNT] = {};
 inline Music music = {};
 inline bool musicLoaded = false;
+inline bool muted = false;
 
 // Returns "" if the file is not found.
 inline std::string FindFile(const char* name) {
@@ -52,8 +53,12 @@ inline void Init() {
     }
 }
 
-// Call every frame or the music stops.
+// Call every frame or the music stops. M mutes and unmutes.
 inline void Update() {
+    if (IsKeyPressed(KEY_M)) {
+        muted = !muted;
+        SetMasterVolume(muted ? 0.0f : 1.0f);
+    }
     if (musicLoaded) UpdateMusicStream(music);
 }
 
