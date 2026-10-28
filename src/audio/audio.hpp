@@ -74,6 +74,14 @@ inline void SetMusicQuiet(bool quiet) {
     if (musicLoaded) SetMusicVolume(music, quiet ? 0.3f : 1.0f);
 }
 
+// Pauses the music, e.g. on the game over screen. Resumes when paused is false.
+inline void SetMusicPaused(bool paused) {
+    if (!musicLoaded) return;
+    const bool playing = IsMusicStreamPlaying(music);
+    if (paused && playing) PauseMusicStream(music);
+    if (!paused && !playing) ResumeMusicStream(music);
+}
+
 inline void Play(Sfx sfx) {
     if (!loaded[sfx]) return;
     Sound& sound = copies[sfx][nextCopy[sfx]];
