@@ -20,8 +20,8 @@ inline const char* kSfxFiles[SFX_COUNT] = {
 constexpr int kCopies = 4;
 
 // Shoot and hit pitch range, in percent of normal.
-constexpr int kPitchMin = 90;
-constexpr int kPitchMax = 110;
+constexpr int kPitchMin = 80;
+constexpr int kPitchMax = 120;
 
 inline Sound sounds[SFX_COUNT] = {};
 inline Sound copies[SFX_COUNT][kCopies] = {};
