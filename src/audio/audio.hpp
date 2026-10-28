@@ -9,19 +9,19 @@
 
 namespace audio {
 
-enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, XP, CHARGE, SFX_COUNT };
+enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, XP, CHARGE, ENEMY_DEATH, SFX_COUNT };
 
 // File names in the same order as Sfx.
 inline const char* kSfxFiles[SFX_COUNT] = {
     "shoot.wav", "hit.wav", "level_up.wav", "pickup.wav", "game_over.wav", "xp.wav",
-    "charge.wav",
+    "charge.wav", "enemy_death.wav",
 };
 
 // Each sound has a few copies that take turns, so a new shot
 // doesn't cut off the one still playing.
 constexpr int kCopies = 4;
 
-// Shoot, hit, and XP pitch range, in percent of normal.
+// Pitch range for sounds that play a lot, in percent of normal.
 constexpr int kPitchMin = 80;
 constexpr int kPitchMax = 120;
 
@@ -96,7 +96,7 @@ inline void Play(Sfx sfx) {
     nextCopy[sfx] = (nextCopy[sfx] + 1) % kCopies;
 
     // These play constantly, so change the pitch a bit each time.
-    if (sfx == SHOOT || sfx == HIT || sfx == XP) {
+    if (sfx == SHOOT || sfx == HIT || sfx == XP || sfx == ENEMY_DEATH) {
         SetSoundPitch(sound, GetRandomValue(kPitchMin, kPitchMax) / 100.0f);
     }
     PlaySound(sound);
