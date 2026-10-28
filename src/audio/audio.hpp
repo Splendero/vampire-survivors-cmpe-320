@@ -4,15 +4,17 @@
 
 #include "raylib.h"
 
+#include <cstring>
 #include <string>
 
 namespace audio {
 
-enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, XP, SFX_COUNT };
+enum Sfx { SHOOT, HIT, LEVEL_UP, PICKUP, GAME_OVER, XP, CHARGE, SFX_COUNT };
 
 // File names in the same order as Sfx.
 inline const char* kSfxFiles[SFX_COUNT] = {
     "shoot.wav", "hit.wav", "level_up.wav", "pickup.wav", "game_over.wav", "xp.wav",
+    "charge.wav",
 };
 
 // Each sound has a few copies that take turns, so a new shot
@@ -98,6 +100,15 @@ inline void Play(Sfx sfx) {
         SetSoundPitch(sound, GetRandomValue(kPitchMin, kPitchMax) / 100.0f);
     }
     PlaySound(sound);
+}
+
+// Plays the sound for the weapon that fired. Guns without their own sound use shoot.wav.
+inline void PlayShot(const char* weapon) {
+    if (weapon && std::strcmp(weapon, "Charge") == 0 && loaded[CHARGE]) {
+        Play(CHARGE);
+    } else {
+        Play(SHOOT);
+    }
 }
 
 // Call every frame. Plays the XP sound when XP or level goes up.

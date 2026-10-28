@@ -169,7 +169,7 @@ private:
             gameOver = true;
         });
 
-        bus.Subscribe(events::Type::WeaponFired, [](const events::Event&) { audio::Play(audio::SHOOT); });
+        bus.Subscribe(events::Type::WeaponFired, [](const events::Event& event) { audio::PlayShot(event.name); });
         bus.Subscribe(events::Type::PlayerHurt, [](const events::Event&) { audio::Play(audio::HIT); });
         bus.Subscribe(events::Type::PlayerDied, [](const events::Event&) { audio::Play(audio::GAME_OVER); });
     }
