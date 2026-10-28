@@ -71,8 +71,14 @@ inline void Update() {
 
 inline void Play(Sfx sfx) {
     if (!loaded[sfx]) return;
-    PlaySound(copies[sfx][nextCopy[sfx]]);
+    Sound& sound = copies[sfx][nextCopy[sfx]];
     nextCopy[sfx] = (nextCopy[sfx] + 1) % kCopies;
+
+    // Shots and hits play constantly, so change the pitch a bit each time.
+    if (sfx == SHOOT || sfx == HIT) {
+        SetSoundPitch(sound, GetRandomValue(90, 110) / 100.0f);
+    }
+    PlaySound(sound);
 }
 
 // Call once, before CloseWindow().
