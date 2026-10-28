@@ -10,6 +10,7 @@ File names the game looks for:
 - `level_up.wav`
 - `pickup.wav`
 - `game_over.wav`
+- `xp.wav` - picking up an XP orb
 
 TODO: menu music, ending UFO.
 
