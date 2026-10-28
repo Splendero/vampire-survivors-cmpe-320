@@ -15,7 +15,13 @@ inline const char* kSfxFiles[SFX_COUNT] = {
     "shoot.wav", "hit.wav", "level_up.wav", "pickup.wav", "game_over.wav",
 };
 
+// Each sound has a few copies that take turns, so a new shot
+// doesn't cut off the one still playing.
+constexpr int kCopies = 4;
+
 inline Sound sounds[SFX_COUNT] = {};
+inline Sound copies[SFX_COUNT][kCopies] = {};
+inline int nextCopy[SFX_COUNT] = {};
 inline bool loaded[SFX_COUNT] = {};
 inline Music music = {};
 inline bool musicLoaded = false;
@@ -43,6 +49,7 @@ inline void Init() {
         const std::string path = FindFile(kSfxFiles[i]);
         if (path.empty()) continue;
         sounds[i] = LoadSound(path.c_str());
+        for (int c = 0; c < kCopies; ++c) copies[i][c] = LoadSoundAlias(sounds[i]);
         loaded[i] = true;
     }
     const std::string path = FindFile("music.mp3");
@@ -63,13 +70,17 @@ inline void Update() {
 }
 
 inline void Play(Sfx sfx) {
-    if (loaded[sfx]) PlaySound(sounds[sfx]);
+    if (!loaded[sfx]) return;
+    PlaySound(copies[sfx][nextCopy[sfx]]);
+    nextCopy[sfx] = (nextCopy[sfx] + 1) % kCopies;
 }
 
 // Call once, before CloseWindow().
 inline void Shutdown() {
     for (int i = 0; i < SFX_COUNT; ++i) {
-        if (loaded[i]) UnloadSound(sounds[i]);
+        if (!loaded[i]) continue;
+        for (int c = 0; c < kCopies; ++c) UnloadSoundAlias(copies[i][c]);
+        UnloadSound(sounds[i]);
     }
     if (musicLoaded) UnloadMusicStream(music);
     CloseAudioDevice();
